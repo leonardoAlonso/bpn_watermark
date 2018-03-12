@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import math
 import backNN as bpn
 from scipy.fftpack import dct
 
@@ -40,14 +39,14 @@ def return_marca(vector):
 def dct_b(bloque):
     quantization = 16.0
     coef = dct(bloque, type = 2, n = None, axis=-1, norm='ortho',overwrite_x=False)
-    #print(coef[0])
-    return coef[0][0]/quantization
+    return round(coef[0][0]/quantization)
+
 def average(bloque):
     avg = 0
     for i in(0, bloque.shape[0] - 1):
         for j in (0, bloque.shape[1] - 1):
             avg = avg + bloque[i][j]
-    return avg/(bloque.shape[0]*bloque.shape[1])
+    return avg/float(bloque.shape[0]*bloque.shape[1])
 
 def return_output_nn(pat):
     NN = bpn.NN(1, 5, 1)
@@ -150,6 +149,7 @@ while i < len(bloques):
     i = i + 1
 
 #incrustacion de la marca de agua
+print("Incrustando la marca...")
 suma_v = suma_bloque(bloques)
 
 img_marcada = np.zeros((gray.shape), np.uint8)
@@ -163,63 +163,37 @@ for i in range(0,len(bloques_marcados)):
     if lista_binaria[i] == 255:
         for x in range(bloque_m.shape[0]):
             for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] + round((0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i])
+                bloque_m[x,y] = bloque_o[x,y] + -round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i]))/suma_v[i]))
+                #print("valor 1",round((0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i]))
+    else:
         for x in range(bloque_m.shape[0]):
             for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] + round((-0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i])
+                bloque_m[x,y] = bloque_o[x,y] + round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i]))/suma_v[i]))
+                #print("valor 0", -round((0.25 * 8 * q + 64 * salidas[i] - suma_v[i]) / suma_v[i]))
     lista_bloques_marcador.append(bloque_m)
 
 img_marcada = return_image(lista_bloques_marcador)
-print(metricPSNR(gray, img_marcada))
+print("Terminado")
 
 #extraccion de la marca
+print("Extrayendo la marca...")
 bloques_img_marcada = separa_bloque(img_marcada)
-coef = []
-avg = []
+avg_n = []
 i = 0
 while i < len(bloques_img_marcada):
-    coef.append(dct_b(bloques_img_marcada[i]))
-    i = i + 1
-#normalizar factores de dct
-max_dct = max(coef)
-i = 0
-while i < len(coef):
-    coef[i] = coef[i]/max_dct
-    i = i + 1
-
-i = 0
-while i < len(bloques_img_marcada):
-    avg.append(average(bloques_img_marcada[i]))
+    avg_n.append(average(bloques_img_marcada[i]))
     i = i + 1
 #normalizar datos del promedio
-max_avg = max(avg)
-i = 0
-while i < len(bloques_img_marcada):
-    avg[i] = avg[i]/max_avg
-    i = i + 1
 
-#entrenamiento de red neuronal
-pat = [i for i in range(0,len(coef))]
-for i in range(0, len(coef)):
-    pat[i] = [[coef[i]],[avg[i]]]
-
-salidas = []
-for i in range(0, len(pat)):
-    salidas.append(return_output_nn(pat[i]))
-
-print(avg)
-print(salidas)
 marca_extraida = []
 for i in range(0, len(salidas)):
-    if avg[i] > salidas[i]:
+    if avg_n[i] > avg[i]:
         marca_extraida.append(255)
     else:
         marca_extraida.append(0)
 marca_extraida = return_marca(marca_extraida)
-marca_extraida = cv2.resize(marca_extraida, (128,128), interpolation = cv2.INTER_CUBIC)
-binary = cv2.resize(binary, (128,128), interpolation = cv2.INTER_CUBIC)
-print(metricPSNR(gray, img_marcada))
-
+print("PSNR de gris y imagen marcada",metricPSNR(gray, img_marcada))
+#print("PSNR de marca y marca extraida",metricPSNR(marca_extraida, binary))
 cv2.imshow("Imagen marcada", img_marcada)
 cv2.imshow("marca extraida", marca_extraida)
 
