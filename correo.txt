@@ -1,0 +1,5 @@
+ssim (similitarity structur index measure)
+ber (bit error rate)
+
+aceclara@gmail.com
+claracru@gmail.com
