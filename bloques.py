@@ -46,23 +46,18 @@ def average(bloque):
     for i in(0, bloque.shape[0] - 1):
         for j in (0, bloque.shape[1] - 1):
             avg = avg + bloque[i][j]
-    return avg/float(bloque.shape[0]*bloque.shape[1])
+    return avg/bloque.shape[0]*bloque.shape[1]
 
 def return_output_nn(pat):
     NN = bpn.NN(1, 5, 1)
     one = []
     one.append(pat)
-    #print(one)
+    print(one)
+    inputs = one[0]
     NN.train(one)
-    salida = NN.ao
-    return salida[0]
-
-#def mse(esperado, obtenido):
-    error = 0
-    for i in range(0, len(esperado)):
-        error += (esperado[i] + obtenido[i]) ** 2
-    error = error/len(esperado)
-    return error
+    salida = NN.runNN(inputs[0])
+    print(salida)
+    return salida
 
 def suma_bloque(bloques):
     suma_v = []
@@ -137,6 +132,7 @@ for i in range(0, len(coef)):
 salidas = []
 for i in range(0, len(pat)):
     salidas.append(return_output_nn(pat[i]))
+    print(i)
 
 #multiplicar promedio y salidas obtenidas por el valor maximo del promedio
 i = 0
@@ -144,10 +140,11 @@ while i < len(bloques):
     avg[i] = avg[i]*max_avg
     i = i + 1
 i = 0
-while i < len(bloques):
-    salidas[i] = salidas[i]*max_avg
-    i = i + 1
 
+while i < len(bloques):
+    salidas[i][0] = salidas[i][0]*(max_dct*16)
+    i = i + 1
+print(salidas)
 #incrustacion de la marca de agua
 print("Incrustando la marca...")
 suma_v = suma_bloque(bloques)
@@ -163,12 +160,12 @@ for i in range(0,len(bloques_marcados)):
     if lista_binaria[i] == 255:
         for x in range(bloque_m.shape[0]):
             for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] + -round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i]))/suma_v[i]))
+                bloque_m[x,y] = bloque_o[x,y] + (round(((0.25*8*16 + (64 * salidas[i][0]) - (suma_v[i])))/suma_v[i]))
                 #print("valor 1",round((0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i]))
     else:
         for x in range(bloque_m.shape[0]):
             for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] + round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i]))/suma_v[i]))
+                bloque_m[x,y] = bloque_o[x,y] -(round(((0.25*8*16 + (64 * salidas[i][0]) - (suma_v[i])))/suma_v[i]))
                 #print("valor 0", -round((0.25 * 8 * q + 64 * salidas[i] - suma_v[i]) / suma_v[i]))
     lista_bloques_marcador.append(bloque_m)
 
@@ -184,14 +181,15 @@ while i < len(bloques_img_marcada):
     avg_n.append(average(bloques_img_marcada[i]))
     i = i + 1
 #normalizar datos del promedio
-
+print(avg_n)
 marca_extraida = []
 for i in range(0, len(salidas)):
-    if avg_n[i] > avg[i]:
+    if avg_n[i] > salidas[i]:
         marca_extraida.append(255)
     else:
         marca_extraida.append(0)
 marca_extraida = return_marca(marca_extraida)
+print("Terminado")
 print("PSNR de gris y imagen marcada",metricPSNR(gray, img_marcada))
 #print("PSNR de marca y marca extraida",metricPSNR(marca_extraida, binary))
 cv2.imshow("Imagen marcada", img_marcada)
