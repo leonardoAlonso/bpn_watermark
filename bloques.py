@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import backNN as bpn
 from scipy.fftpack import dct
-import math
 
 def separa_bloque(gray):
     matrices = []
@@ -87,135 +86,144 @@ def metricPSNR (image1,image2):
     psnr = 10 * np.log10((255*255)/mse)
     return psnr
 
-
-'''Imagen original'''
-imagen = cv2.imread('Lena.tiff')
-gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-gray = cv2.resize(gray, (256,256), interpolation = cv2.INTER_CUBIC)
-gray = gray.astype(np.float64)
-'''Marca de agua para incertar'''
-marca = cv2.imread('marca.png')
-marca_gray = cv2.cvtColor(marca, cv2.COLOR_BGR2GRAY)
-marca_gray = cv2.resize(marca_gray, (32,32), interpolation = cv2.INTER_CUBIC)
-ret,binary = cv2.threshold(marca_gray,127,255,cv2.THRESH_BINARY)
-binary = binary.astype(np.float64)
-
-
-'''Obtencion de los coeficientes de dc y los promedios
-para el entrenamiento de la red neuronal'''
-coef = []
-avg = []
-bloques = separa_bloque(gray)
-
-i = 0
-while i < len(bloques):
-    coef.append(dct_b(bloques[i]))
-    i = i + 1
-#normalizar factores de dct
-max_dct = max(coef)
-i = 0
-while i < len(coef):
-    coef[i] = coef[i]/max_dct
-    i = i + 1
-
-i = 0
-while i < len(bloques):
-    avg.append(average(bloques[i]))
-    i = i + 1
-#normalizar datos del promedio
-max_avg = max(avg)
-i = 0
-while i < len(bloques):
-    avg[i] = avg[i]/max_avg
-    i = i + 1
-
-#entrenamiento de red neuronal
-pat = [i for i in range(0,len(coef))]
-for i in range(0, len(coef)):
-    pat[i] = [[coef[i]],[avg[i]]]
-
-salidas = []
-net = []
-for i in range(0, len(pat)):
-    s, network = return_output_nn(pat[i])
-    salidas.append(s)
-    net.append(network)
-    #print(i)
-#multiplicar promedio y salidas obtenidas por el valor maximo del promedio
-i = 0
-while i < len(bloques):
-    avg[i] = avg[i]*max_avg
-    i = i + 1
-i = 0
-while i < len(bloques):
-    salidas[i] = salidas[i]*(1000)
-    i = i + 1
-#print(salidas)
-#incrustacion de la marca de agua
-print("Incrustando la marca...")
-suma_v = suma_bloque(bloques)
-
-img_marcada = np.zeros((gray.shape), np.uint8)
-bloques_marcados = separa_bloque(img_marcada)
-lista_binaria = lista_marca(binary)
-lista_bloques_marcador = []
-q = 16.0
-for i in range(0,len(bloques_marcados)):
-    bloque_m = bloques_marcados[i]
-    bloque_o = bloques[i]
-    if lista_binaria[i] == 255:
-        for x in range(bloque_m.shape[0]):
-            for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] + (round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i])))/suma_v[i]))
-                #print("valor 1",round((0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i]))
-    else:
-        for x in range(bloque_m.shape[0]):
-            for y in range(bloque_m.shape[1]):
-                bloque_m[x,y] = bloque_o[x,y] - (round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i])))/suma_v[i]))
-                #print("valor 0", -round((0.25 * 8 * q + 64 * salidas[i] - suma_v[i]) / suma_v[i]))
-    lista_bloques_marcador.append(bloque_m)
-
-img_marcada = return_image(lista_bloques_marcador)
-print("Terminado")
-
-#extraccion de la marca
-print("Extrayendo la marca...")
-bloques_img_marcada = separa_bloque(img_marcada)
-coef = []
-avg_n = []
-salidas_n = []
-i = 0
-while i < len(bloques_img_marcada):
-    coef.append(dct_b(bloques_img_marcada[i]))
-    i = i + 1
-for i in range(len(net)):
-    c = []
-    c.append(coef[i])
-    salidas_n.append(net[i].runNN(c))
-i = 0
-print(net[0].wi)
-while i < len(bloques_img_marcada):
-    avg_n.append(average(bloques_img_marcada[i]))
-    i = i + 1
-#normalizar datos del promedio
-marca_extraida = []
-for i in range(0, len(avg_n)):
-    if avg_n[i] > salidas[i]:
-        marca_extraida.append(255)
-    else:
-        marca_extraida.append(0)
-marca_extraida = return_marca(marca_extraida)
-print("Terminado")
-print("PSNR de gris y imagen marcada",metricPSNR(gray, img_marcada))
-#print("PSNR de marca y marca extraida",metricPSNR(marca_extraida, binary))
-cv2.imshow("Imagen marcada", img_marcada)
-cv2.imshow("marca extraida", marca_extraida)
-gray = gray.astype(np.uint8)
-cv2.imshow("original", gray)
-cv2.imshow("marca", binary)
-cv2.imshow("diferencia", gray-img_marcada)
-cv2.imshow("diferencia marca", binary-marca_extraida)
+def main():
+    '''Imagen original'''
+    imagen = cv2.imread('Lena.tiff')
+    gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, (256,256), interpolation = cv2.INTER_CUBIC)
+    gray = gray.astype(np.float64)
+    '''Marca de agua para incertar'''
+    marca = cv2.imread('marca.png')
+    marca_gray = cv2.cvtColor(marca, cv2.COLOR_BGR2GRAY)
+    marca_gray = cv2.resize(marca_gray, (32,32), interpolation = cv2.INTER_CUBIC)
+    ret,binary = cv2.threshold(marca_gray,127,255,cv2.THRESH_BINARY)
+    binary = binary.astype(np.float64)
 
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    '''Obtencion de los coeficientes de dc y los promedios
+    para el entrenamiento de la red neuronal'''
+    coef = []
+    avg = []
+    bloques = separa_bloque(gray)
+
+    i = 0
+    while i < len(bloques):
+        coef.append(dct_b(bloques[i]))
+        i = i + 1
+    #normalizar factores de dct
+    max_dct = max(coef)
+    i = 0
+    while i < len(coef):
+        coef[i] = coef[i]/max_dct
+        i = i + 1
+
+    i = 0
+    while i < len(bloques):
+        avg.append(average(bloques[i]))
+        i = i + 1
+    #normalizar datos del promedio
+    max_avg = max(avg)
+    i = 0
+    while i < len(bloques):
+        avg[i] = avg[i]/max_avg
+        i = i + 1
+
+    #entrenamiento de red neuronal
+    pat = [i for i in range(0,len(coef))]
+    for i in range(0, len(coef)):
+        pat[i] = [[coef[i]],[avg[i]]]
+
+    salidas = []
+    net = []
+    for i in range(0, len(pat)):
+        s, network = return_output_nn(pat[i])
+        salidas.append(s)
+        net.append(network)
+    #multiplicar promedio y salidas obtenidas por el valor maximo del promedio
+    i = 0
+    while i < len(bloques):
+        avg[i] = avg[i]*max_avg
+        i = i + 1
+    i = 0
+    while i < len(bloques):
+        salidas[i] = salidas[i]*(max_dct*16)
+        i = i + 1
+    #incrustacion de la marca de agua
+    print("Incrustando la marca...")
+    suma_v = suma_bloque(bloques)
+
+    img_marcada = np.zeros((gray.shape), np.uint8)
+    bloques_marcados = separa_bloque(img_marcada)
+    lista_binaria = lista_marca(binary)
+    lista_bloques_marcador = []
+    q = 16.0
+    for i in range(0,len(bloques_marcados)):
+        bloque_m = bloques_marcados[i]
+        bloque_o = bloques[i]
+        if lista_binaria[i] == 255:
+            for x in range(bloque_m.shape[0]):
+                for y in range(bloque_m.shape[1]):
+                    bloque_m[x,y] = bloque_o[x,y] + (round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i])))/suma_v[i]))
+                    #print("valor 1",round((0.25*8*q + 64 * salidas[i] - suma_v[i])/suma_v[i]))
+        else:
+            for x in range(bloque_m.shape[0]):
+                for y in range(bloque_m.shape[1]):
+                    bloque_m[x,y] = bloque_o[x,y] - (round(((0.25*8*q + (64 * salidas[i]) - (suma_v[i])))/suma_v[i]))
+                    #print("valor 0", -round((0.25 * 8 * q + 64 * salidas[i] - suma_v[i]) / suma_v[i]))
+        lista_bloques_marcador.append(bloque_m)
+
+    img_marcada = return_image(lista_bloques_marcador)
+    print("Terminado")
+
+    #extraccion de la marca
+    print("Extrayendo la marca...")
+    bloques_img_marcada = separa_bloque(img_marcada)
+    coef = []
+    avg_n = []
+    salidas_n = []
+    i = 0
+    while i < len(bloques_img_marcada):
+        coef.append(dct_b(bloques_img_marcada[i]))
+        i = i + 1
+    max_dct = max(coef)
+    i = 0
+    while i < len(coef):
+        coef[i] = coef[i]/max_dct
+        i = i + 1
+    for i in range(len(net)):
+        c = []
+        c.append(coef[i])
+        salidas_n.append(net[i].runNN(c))
+    print(max_avg)
+    sal = []
+    for i in salidas_n:
+        sal.append(float(round(i[0]*(max_avg))))
+
+    print(sal)
+    i = 0
+    while i < len(bloques_img_marcada):
+        avg_n.append(average(bloques_img_marcada[i]))
+        i = i + 1
+    print(avg_n)
+    marca_extraida = []
+    for i in range(len(avg_n)):
+        if avg_n[i] >= sal[i]:
+            marca_extraida.append(255)
+        else:
+            marca_extraida.append(0)
+    marca_extraida = return_marca(marca_extraida)
+    print("Terminado")
+    print("PSNR de gris y imagen marcada",metricPSNR(gray, img_marcada))
+    #print("PSNR de marca y marca extraida",metricPSNR(marca_extraida, binary))
+    cv2.imshow("Imagen marcada", img_marcada)
+    cv2.imshow("marca extraida", marca_extraida)
+    gray = gray.astype(np.uint8)
+    cv2.imshow("original", gray)
+    cv2.imshow("marca", binary)
+    cv2.imshow("diferencia", gray-img_marcada)
+    cv2.imshow("diferencia marca", binary-marca_extraida)
+
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
