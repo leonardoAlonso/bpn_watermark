@@ -18,6 +18,7 @@ class GuiWatermark(QWidget):
         self.label_marca  =QLabel()
         self.net = []
         self.logs = QTextEdit()
+        self.max_avg = None
         self.initUI()
 
     def initUI(self):
@@ -58,6 +59,7 @@ class GuiWatermark(QWidget):
         self.setWindowIcon(QIcon("marca.png"))
 
     def abrir_imagen(self):
+        self.image = None
         filename, _ = QFileDialog.getOpenFileName(None, 'Buscar Imagen', '.', 'Image Files (*.png *.jpg *.jpeg *.bmp *.tiff)')
         if filename:
             with open(filename, "rb") as file:
@@ -65,6 +67,7 @@ class GuiWatermark(QWidget):
                 self.image = cv2.resize(self.image, (256, 256), interpolation=cv2.INTER_CUBIC)
                 self.mostrar_imagen()
     def abrir_marca(self):
+        self.marca = None
         filename, _ = QFileDialog.getOpenFileName(None, 'Buscar Imagen', '.', 'Image Files (*.png *.jpg *.jpeg *.bmp *.tiff)')
         if filename:
             with open(filename, "rb") as file:
@@ -99,10 +102,10 @@ class GuiWatermark(QWidget):
                 avg.append(block.average(bloques[i]))
                 i = i + 1
             # normalizar datos del promedio
-            max_avg = max(avg)
+            self.max_avg = max(avg)
             i = 0
             while i < len(bloques):
-                avg[i] = avg[i] / max_avg
+                avg[i] = avg[i] / self.max_avg
                 i = i + 1
             # entrenamiento de red neuronal
             self.logs.setPlainText(self.logs.toPlainText() + "\nEntrenando red neuronal")
@@ -118,7 +121,7 @@ class GuiWatermark(QWidget):
             # multiplicar promedio y salidas obtenidas por el valor maximo del promedio
             i = 0
             while i < len(bloques):
-                avg[i] = avg[i] * max_avg
+                avg[i] = avg[i] * self.max_avg
                 i = i + 1
             i = 0
             while i < len(bloques):
@@ -156,7 +159,43 @@ class GuiWatermark(QWidget):
             self.save_image()
 
     def extraer_marca(self):
-        print("Extraer")
+        self.abrir_imagen()
+        bloques_img_marcada = block.separa_bloque(self.image)
+        coef = []
+        avg_n = []
+        salidas_n = []
+        i = 0
+        while i < len(bloques_img_marcada):
+            coef.append(block.dct_b(bloques_img_marcada[i]))
+            i = i + 1
+        max_dct = max(coef)
+        i = 0
+        while i < len(coef):
+            coef[i] = coef[i] / max_dct
+            i = i + 1
+        for i in range(len(self.net)):
+            c = []
+            c.append(coef[i])
+            salidas_n.append(self.net[i].runNN(c))
+        sal = []
+        for i in salidas_n:
+            sal.append(float(round(i[0] * (self.max_avg))))
+        i = 0
+        while i < len(bloques_img_marcada):
+            avg_n.append(block.average(bloques_img_marcada[i]))
+            i = i + 1
+        marca_extraida = []
+        print(avg_n)
+        print(sal)
+        for i in range(len(avg_n)):
+            if avg_n[i] >= sal[i]:
+                marca_extraida.append(255)
+            else:
+                marca_extraida.append(0)
+        marca_extraida = block.return_marca(marca_extraida)
+        self.marca = marca_extraida
+        self.logs.setPlainText("Se ha extraido la marca")
+        self.mostrar_marca()
 
     def save_image(self):
         buttonReply = QMessageBox.question(self, 'Guardar imagen', "¿Deseas guardar la imagen marcada?",
