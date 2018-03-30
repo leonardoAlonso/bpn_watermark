@@ -119,7 +119,7 @@ class NN:
                 error = self.backPropagate(targets, N, M)
             #if i % 50 == 0:
                 #print('Combined error', error)
-            if error < 0.001:
+            if error < 0.000001:
                 break
         #self.test(patterns)
 
