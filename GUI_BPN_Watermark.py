@@ -153,7 +153,6 @@ class GuiWatermark(QWidget):
                 lista_bloques_marcador.append(bloque_m)
 
             img_marcada = block.return_image(lista_bloques_marcador)
-            print("PSNR: ", block.metricPSNR(img_marcada,self.image))
             self.logs.setPlainText(self.logs.toPlainText() + "\nPSNR: " + str(block.metricPSNR(img_marcada,self.image)))
             self.image = self.image.astype(np.uint8)
             self.image = img_marcada
@@ -185,12 +184,8 @@ class GuiWatermark(QWidget):
             avg_n.append(block.average(bloques_img_marcada[i]))
             i = i + 1
         marca_extraida = []
-        print(avg_n)
-        print(max(avg_n))
-        print(self.max_avg)
         for i in salidas_n:
             sal.append(float(round(i[0] * (max(avg_n)))))
-        print(sal)
         for i in range(len(avg_n)):
             if avg_n[i] >= sal[i]:
                 marca_extraida.append(255)
@@ -202,29 +197,21 @@ class GuiWatermark(QWidget):
         self.logs.setPlainText("Se ha extraido la marca")
         self.mostrar_marca()
 
-    def save(self, path, image, jpg_quality=None, png_compression=None):
-        if jpg_quality:
-            cv2.imwrite(path, image, [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality])
-        elif png_compression:
-            cv2.imwrite(path, image, [int(cv2.IMWRITE_PNG_COMPRESSION), png_compression])
-        else:
-            cv2.imwrite(path, image)
-
     def save_image(self):
         buttonReply = QMessageBox.question(self, 'Guardar imagen', "¿Deseas guardar la imagen marcada?",
                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if buttonReply == QMessageBox.Yes:
             filename, _ = QFileDialog.getSaveFileName(None, 'Guardar Imagen')
             #cv2.imwrite(filename+".jpg",self.image,[cv2.IMWRITE_JPEG_QUALITY, 0])
-            self.save(filename, self.image, png_compression=84)
+            extension = filename.split(".")
+            ex = str(extension[1])
+            if ex == 'png':
+                cv2.imwrite(filename, self. image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+            elif ex == 'jpg':
+                cv2.imwrite(filename, self.image, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            else:
+                cv2.imwrite(filename, self.image)
 
-            '''
-            mensaje = QMessageBox()
-            mensaje.setWindowTitle("Guardada")
-            mensaje.setWindowIcon(QIcon("marca.png"))
-            mensaje.setText("Imagen guardada con exito")
-            mensaje.exec_()
-            '''
             self.logs.setPlainText(self.logs.toPlainText() + "\nImagen Guardada")
         else:
             self.logs.setPlainText(self.logs.toPlainText() + "\nNope :c")
