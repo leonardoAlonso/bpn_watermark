@@ -65,6 +65,7 @@ class GuiWatermark(QWidget):
             with open(filename, "rb") as file:
                 self.image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
                 self.image = cv2.resize(self.image, (256, 256), interpolation=cv2.INTER_CUBIC)
+                cv2.imwrite("gris.tiff", self.image)
                 self.mostrar_imagen()
     def abrir_marca(self):
         self.marca = None
@@ -75,6 +76,7 @@ class GuiWatermark(QWidget):
                 self.marca = cv2.resize(self.marca, (32, 32), interpolation=cv2.INTER_CUBIC)
                 ret, binary = cv2.threshold(self.marca, 127, 255, cv2.THRESH_BINARY)
                 self.marca = binary
+                cv2.imwrite("marcau.jpg",self.marca)
                 self.mostrar_marca()
 
     def insertar_marca(self):
@@ -125,7 +127,7 @@ class GuiWatermark(QWidget):
                 i = i + 1
             i = 0
             while i < len(bloques):
-                salidas[i] = salidas[i] * (max_dct * 16)
+                salidas[i] = salidas[i] * (self.max_avg)
                 i = i + 1
             # incrustacion de la marca de agua
             suma_v = block.suma_bloque(bloques)
@@ -178,14 +180,16 @@ class GuiWatermark(QWidget):
             c.append(coef[i])
             salidas_n.append(self.net[i].runNN(c))
         sal = []
-        for i in salidas_n:
-            sal.append(float(round(i[0] * (self.max_avg))))
         i = 0
         while i < len(bloques_img_marcada):
             avg_n.append(block.average(bloques_img_marcada[i]))
             i = i + 1
         marca_extraida = []
         print(avg_n)
+        print(max(avg_n))
+        print(self.max_avg)
+        for i in salidas_n:
+            sal.append(float(round(i[0] * (max(avg_n)))))
         print(sal)
         for i in range(len(avg_n)):
             if avg_n[i] >= sal[i]:
@@ -193,16 +197,27 @@ class GuiWatermark(QWidget):
             else:
                 marca_extraida.append(0)
         marca_extraida = block.return_marca(marca_extraida)
+        cv2.imwrite("marca_extraida.png", marca_extraida)
         self.marca = marca_extraida
         self.logs.setPlainText("Se ha extraido la marca")
         self.mostrar_marca()
+
+    def save(self, path, image, jpg_quality=None, png_compression=None):
+        if jpg_quality:
+            cv2.imwrite(path, image, [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality])
+        elif png_compression:
+            cv2.imwrite(path, image, [int(cv2.IMWRITE_PNG_COMPRESSION), png_compression])
+        else:
+            cv2.imwrite(path, image)
 
     def save_image(self):
         buttonReply = QMessageBox.question(self, 'Guardar imagen', "¿Deseas guardar la imagen marcada?",
                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if buttonReply == QMessageBox.Yes:
             filename, _ = QFileDialog.getSaveFileName(None, 'Guardar Imagen')
-            cv2.imwrite(filename+".jpg",self.image)
+            #cv2.imwrite(filename+".jpg",self.image,[cv2.IMWRITE_JPEG_QUALITY, 0])
+            self.save(filename, self.image, png_compression=84)
+
             '''
             mensaje = QMessageBox()
             mensaje.setWindowTitle("Guardada")
