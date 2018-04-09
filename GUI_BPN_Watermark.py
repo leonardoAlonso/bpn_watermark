@@ -193,8 +193,13 @@ class GuiWatermark(QWidget):
                 marca_extraida.append(0)
         marca_extraida = block.return_marca(marca_extraida)
         cv2.imwrite("marca_extraida.png", marca_extraida)
+        marca_or = self.marca
         self.marca = marca_extraida
         self.logs.setPlainText("Se ha extraido la marca")
+        bin_or = block.do_binary(marca_or)
+        bin_mar = block.do_binary(self.marca)
+        bcr = block.bcr(bin_or, bin_mar)
+        self.logs.setPlainText(self.logs.toPlainText() + "\n" + str(bcr))
         self.mostrar_marca()
 
     def save_image(self):
@@ -208,7 +213,7 @@ class GuiWatermark(QWidget):
             if ex == 'png':
                 cv2.imwrite(filename, self. image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
             elif ex == 'jpg':
-                cv2.imwrite(filename, self.image, [cv2.IMWRITE_JPEG_QUALITY, 90])
+                cv2.imwrite(filename, self.image, [cv2.IMWRITE_JPEG_QUALITY, 70])
             else:
                 cv2.imwrite(filename, self.image)
 

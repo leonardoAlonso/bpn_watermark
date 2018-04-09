@@ -86,6 +86,26 @@ def metricPSNR (image1,image2):
     psnr = 10 * np.log10((255*255)/mse)
     return psnr
 
+def bcr(marca_or, marca_ex):
+    sum_or = 0
+    sum_ex = 0
+    for i in range(marca_or.shape[0]):
+        for j in range(marca_or.shape[1]):
+            sum_or += marca_or[i][j]
+            sum_ex += marca_ex[i][j]
+    be = 1-((sum_or^sum_ex)/(marca_or.shape[0]*marca_or.shape[1]))
+    return be*100
+
+def do_binary(image):
+    binary = np.zeros(image.shape, np.uint8)
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            if image[i,j] == 255:
+                binary[i,j] = 1
+            else:
+                image[i,j] = 0
+    return binary
+
 def main():
     '''Imagen original'''
     imagen = cv2.imread('Lena.tiff')
@@ -223,7 +243,7 @@ def main():
     cv2.imshow("diferencia", gray-img_marcada)
     cv2.imshow("diferencia marca", binary-marca_extraida)
 
-
+    print(lista_binaria)
+    print(do_binary(marca_extraida))
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-
