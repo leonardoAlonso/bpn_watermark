@@ -199,7 +199,7 @@ class GuiWatermark(QWidget):
         bin_or = block.do_binary(marca_or)
         bin_mar = block.do_binary(self.marca)
         bcr = block.bcr(bin_or, bin_mar)
-        self.logs.setPlainText(self.logs.toPlainText() + "\n" + str(bcr))
+        self.logs.setPlainText(self.logs.toPlainText() + "\nBit Corretlation Ratio: " + str(bcr))
         self.mostrar_marca()
 
     def save_image(self):
