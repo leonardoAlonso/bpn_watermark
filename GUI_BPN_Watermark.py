@@ -13,6 +13,9 @@ class GuiWatermark(QWidget):
     def __init__(self):
         super().__init__()
         self.image = None
+        self.b = None
+        self.g = None
+        self.r = None
         self.marca = None
         self.label = QLabel()
         self.label_marca  =QLabel()
@@ -63,7 +66,7 @@ class GuiWatermark(QWidget):
         filename, _ = QFileDialog.getOpenFileName(None, 'Buscar Imagen', '.', 'Image Files (*.png *.jpg *.jpeg *.bmp *.tiff)')
         if filename:
             with open(filename, "rb") as file:
-                self.image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+                self.image = cv2.imread(filename)
                 self.image = cv2.resize(self.image, (256, 256), interpolation=cv2.INTER_CUBIC)
                 cv2.imwrite("gris.tiff", self.image)
                 self.mostrar_imagen()
@@ -80,15 +83,17 @@ class GuiWatermark(QWidget):
                 self.mostrar_marca()
 
     def insertar_marca(self):
+        #self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2YCrCb)
+        self.b, self.g, self.r = cv2.split(self.image)
         self.logs.setPlainText("Insertando marca...")
         if self.image is not None:
-            self.image = cv2.resize(self.image, (256,256), interpolation = cv2.INTER_CUBIC)
-            self.image = self.image.astype(np.float64)
+            #self.image = cv2.resize(self.image, (256,256), interpolation = cv2.INTER_CUBIC)
+            self.b = self.b.astype(np.float64)
             '''Obtencion de los coeficientes de dc y los promedios
                 para el entrenamiento de la red neuronal'''
             coef = []
             avg = []
-            bloques = block.separa_bloque(self.image)
+            bloques = block.separa_bloque(self.b)
             i = 0
             while i < len(bloques):
                 coef.append(block.dct_b(bloques[i]))
@@ -132,7 +137,7 @@ class GuiWatermark(QWidget):
             # incrustacion de la marca de agua
             suma_v = block.suma_bloque(bloques)
 
-            img_marcada = np.zeros((self.image.shape), np.uint8)
+            img_marcada = np.zeros((self.b.shape), np.uint8)
             bloques_marcados = block.separa_bloque(img_marcada)
             lista_binaria = block.lista_marca(self.marca)
             lista_bloques_marcador = []
@@ -153,14 +158,21 @@ class GuiWatermark(QWidget):
                 lista_bloques_marcador.append(bloque_m)
 
             img_marcada = block.return_image(lista_bloques_marcador)
-            self.logs.setPlainText(self.logs.toPlainText() + "\nPSNR: " + str(block.metricPSNR(img_marcada,self.image)))
-            self.image = self.image.astype(np.uint8)
-            self.image = img_marcada
+            img_marcada = img_marcada.astype(np.uint8)
+            self.b = self.b.astype(np.uint8)
+            self.b = img_marcada
+            aux = cv2.merge((self.b, self.g, self.r))
+            self.logs.setPlainText(self.logs.toPlainText() + "\nPSNR: " + str(block.metricPSNR(self.image,aux)))
+            self.image = aux
+            #self.image = cv2.cvtColor(self.image, cv2.COLOR_YCrCb2BGR)
             self.mostrar_imagen()
             self.save_image()
 
     def extraer_marca(self):
         self.abrir_imagen()
+        #self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2YCrCb)
+        self.b, self.g, self.r = cv2.split(self.image)
+        self.image = self.b
         bloques_img_marcada = block.separa_bloque(self.image)
         coef = []
         avg_n = []
