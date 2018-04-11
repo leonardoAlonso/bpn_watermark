@@ -82,7 +82,7 @@ def metricPSNR (image1,image2):
     image1 = image1.astype(np.float64)
     image2 = image2.astype(np.float64)
     dif = np.sum((image1 - image2) ** 2)
-    mse = dif / (image1.shape[0] * image2.shape[1])
+    mse = dif / (image1.shape[0] * image2.shape[1] * image2.shape[2])
     psnr = 10 * np.log10((255*255)/mse)
     return psnr
 
