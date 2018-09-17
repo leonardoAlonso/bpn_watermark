@@ -50,15 +50,7 @@ class NN:
         return self.ao
 
     def backPropagate(self, targets, N, M):
-        # http://www.youtube.com/watch?v=aVId8KMsdUU&feature=BFa&list=LLldMCkmXl4j9_v0HeKdNcRA
-
-        # calc output deltas
-        # we want to find the instantaneous rate of change of ( error with respect to weight from node j to node k)
-        # output_delta is defined as an attribute of each ouput node. It is not the final rate we need.
-        # To get the final rate we must multiply the delta by the activation of the hidden layer node in question.
-        # This multiplication is done according to the chain rule as we are taking the derivative of the activation function
-        # of the ouput node.
-        # dE/dw[j][k] = (t[k] - ao[k]) * s'( SUM( w[j][k]*ah[j] ) ) * ah[j]
+        
         output_deltas = [0.0] * self.no
         for k in range(self.no):
             error = targets[k] - self.ao[k]
